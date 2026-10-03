@@ -102,6 +102,10 @@ async function askClaude(message, sessionId) {
 const app = express();
 app.use(express.json({ limit: "64kb" }));
 
+app.get("/", (_req, res) => {
+  res.type("text").send("Claude chat backend is running. Check /health for status.");
+});
+
 app.get("/health", (_req, res) => {
   res.json({ ok: true, auth: authMode(), model: MODEL, token: tokenInfo() });
 });
