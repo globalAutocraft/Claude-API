@@ -74,7 +74,8 @@ async function askClaude(message, sessionId) {
         }
       } else if (msg.type === "result") {
         if (msg.is_error) {
-          throw new Error(`Claude returned an error (${msg.subtype})`);
+          const detail = typeof msg.result === "string" && msg.result ? msg.result : msg.subtype;
+          throw new Error(`Claude returned an error: ${detail}`);
         }
         if (typeof msg.result === "string" && msg.result) reply = msg.result;
       }
