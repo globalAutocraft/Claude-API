@@ -36,6 +36,18 @@ function safeEqual(a, b) {
   return ab.length === bb.length && crypto.timingSafeEqual(ab, bb);
 }
 
+// The setup-token output wraps across lines; copying it often picks up spaces/newlines.
+if (process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+  process.env.CLAUDE_CODE_OAUTH_TOKEN = process.env.CLAUDE_CODE_OAUTH_TOKEN.replace(/\s+/g, "");
+}
+
+// Shape check only; never exposes the token itself.
+function tokenInfo() {
+  const t = process.env.CLAUDE_CODE_OAUTH_TOKEN || "";
+  if (!t) return null;
+  return { prefixOk: t.startsWith("sk-ant-oat"), length: t.length };
+}
+
 function buildEnv() {
   const env = { ...process.env };
   // Empty strings would shadow the local login, so drop them.
@@ -91,7 +103,7 @@ const app = express();
 app.use(express.json({ limit: "64kb" }));
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, auth: authMode(), model: MODEL });
+  res.json({ ok: true, auth: authMode(), model: MODEL, token: tokenInfo() });
 });
 
 app.post("/chat", async (req, res) => {
