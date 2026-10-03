@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    :root { --bg:#f6f7f9; --panel:#fff; --text:#1d1f23; --muted:#6b7280; --accent:#c96442; --user:#c96442; --bot:#eef0f3; --border:#e3e5e8; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#16171a; --panel:#1f2024; --text:#ececec; --muted:#9ca3af; --bot:#2a2c31; --border:#33353b; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--text); }
+    header { padding:24px 16px; text-align:center; }
+    header h1 { margin:0 0 6px; font-size:28px; }
+    header p { margin:0; color:var(--muted); }
+
+    #chat-toggle { position:fixed; right:20px; bottom:20px; width:56px; height:56px; border-radius:50%; border:none; background:var(--accent); color:#fff; font-size:24px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.2); }
+    #chat { position:fixed; right:20px; bottom:88px; width:min(380px, calc(100vw - 32px)); height:min(560px, calc(100vh - 120px)); background:var(--panel); border:1px solid var(--border); border-radius:14px; display:none; flex-direction:column; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.18); }
+    #chat.open { display:flex; }
+    #chat-head { padding:12px 14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-weight:600; }
+    #chat-head button { background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px; }
+    #messages { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; }
+    .msg { max-width:85%; padding:9px 12px; border-radius:12px; line-height:1.45; white-space:pre-wrap; word-wrap:break-word; font-size:14px; }
+    .user { align-self:flex-end; background:var(--user); color:#fff; border-bottom-right-radius:4px; }
+    .bot { align-self:flex-start; background:var(--bot); border-bottom-left-radius:4px; }
+    .error { align-self:center; color:#dc2626; font-size:13px; }
+    .typing { color:var(--muted); font-style:italic; }
+    form { display:flex; gap:8px; padding:10px; border-top:1px solid var(--border); }
+    textarea { flex:1; resize:none; height:42px; padding:10px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font:inherit; font-size:14px; }
+    form button { padding:0 16px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
+    form button:disabled { opacity:.5; cursor:default; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>My Website</h1>
+    <p>Your page content goes here. The chatbot is in the bottom-right corner.</p>
+  </header>
+
+  <div id="chat">
+    <div id="chat-head">
+      <span>Assistant</span>
+      <button type="button" id="new-chat">New chat</button>
+    </div>
+    <div id="messages"></div>
+    <form id="chat-form">
+      <textarea id="input" placeholder="Type a message…" required></textarea>
+      <button type="submit" id="send">Send</button>
+    </form>
+  </div>
+  <button id="chat-toggle" aria-label="Open chat">💬</button>
+
+  <script>
+    var sessionId = null;
+    var chat = document.getElementById('chat');
+    var messages = document.getElementById('messages');
+    var input = document.getElementById('input');
+    var sendBtn = document.getElementById('send');
+
+    document.getElementById('chat-toggle').onclick = function () {
+      chat.classList.toggle('open');
+      if (chat.classList.contains('open')) input.focus();
+    };
+
+    document.getElementById('new-chat').onclick = function () {
+      sessionId = null;
+      messages.innerHTML = '';
+    };
+
+    function add(text, cls) {
+      var el = document.createElement('div');
+      el.className = 'msg ' + cls;
+      el.textContent = text;
+      messages.appendChild(el);
+      messages.scrollTop = messages.scrollHeight;
+      return el;
+    }
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('chat-form').requestSubmit();
+      }
+    });
+
+    document.getElementById('chat-form').onsubmit = function (e) {
+      e.preventDefault();
+      var text = input.value.trim();
+      if (!text) return;
+
+      add(text, 'user');
+      input.value = '';
+      sendBtn.disabled = true;
+      var typing = add('Thinking…', 'bot typing');
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          typing.remove();
+          sessionId = res.sessionId;
+          add(res.reply || '(empty reply)', 'bot');
+          sendBtn.disabled = false;
+          input.focus();
+        })
+        .withFailureHandler(function (err) {
+          typing.remove();
+          add(err.message || String(err), 'error');
+          sendBtn.disabled = false;
+        })
+        .sendChatMessage(text, sessionId);
+    };
+  </script>
+</body>
+</html>

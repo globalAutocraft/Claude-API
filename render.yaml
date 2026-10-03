@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: claude-chat-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: BACKEND_SECRET
+        generateValue: true
+      - key: CLAUDE_MODEL
+        value: sonnet
+      - key: SYSTEM_PROMPT
+        value: You are a helpful assistant on my personal website. Answer clearly and concisely.
+      # Secrets: you type these into the Render dashboard; they are never stored in git.
+      - key: CLAUDE_CODE_OAUTH_TOKEN
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
